@@ -1,9 +1,8 @@
 use std::{io::Cursor, sync::Arc};
 
 use crate::error::Error;
-use crate::Result;
+use crate::{Mutex, Result};
 use binrw::{BinRead, BinWrite};
-use rtsc::pi::Mutex;
 
 #[allow(clippy::module_name_repetitions)]
 pub trait RpdoContext {
