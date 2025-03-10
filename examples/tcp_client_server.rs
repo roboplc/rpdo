@@ -65,10 +65,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             let stream = stream.unwrap();
             stream.set_nodelay(true).unwrap();
             stream
-                .set_read_timeout(Some(Duration::from_secs(1)))
+                .set_read_timeout(Some(Duration::from_secs(5)))
                 .unwrap();
             stream
-                .set_write_timeout(Some(Duration::from_secs(1)))
+                .set_write_timeout(Some(Duration::from_secs(5)))
                 .unwrap();
             let mut processor = rpdo::io::SimpleServerProcessor::new(host.clone(), stream);
             thread::spawn(move || loop {
@@ -82,8 +82,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     thread::sleep(Duration::from_secs(1));
     let stream = std::net::TcpStream::connect("127.0.0.1:3003")?;
     stream.set_nodelay(true)?;
-    stream.set_read_timeout(Some(Duration::from_secs(1)))?;
-    stream.set_write_timeout(Some(Duration::from_secs(1)))?;
+    stream.set_read_timeout(Some(Duration::from_secs(5)))?;
+    stream.set_write_timeout(Some(Duration::from_secs(5)))?;
     let mut client = rpdo::io::SimpleClient::new(stream, 0);
     let mut counter: u32 = 0;
     loop {
