@@ -10,6 +10,8 @@ use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
 
 const MAX_UDP_PACKET_SIZE: usize = 16384;
 
+const DEFAULT_ZERO_COPY_AFTER: usize = 32768;
+
 pub struct UdpStream {
     socket: UdpSocket,
     peer: Option<SocketAddr>,
@@ -101,6 +103,8 @@ where
     stream: S,
     target_id: u32,
     data_buf: Vec<u8>,
+    zero_copy_after: usize,
+    always_flush: bool,
 }
 
 impl<S> SimpleClient<S>
@@ -113,7 +117,17 @@ where
             stream,
             target_id,
             data_buf: Vec::new(),
+            zero_copy_after: DEFAULT_ZERO_COPY_AFTER,
+            always_flush: true,
         }
+    }
+    pub fn with_zero_copy_after(mut self, zero_copy_after: usize) -> Self {
+        self.zero_copy_after = zero_copy_after;
+        self
+    }
+    pub fn with_always_flush(mut self, always_flush: bool) -> Self {
+        self.always_flush = always_flush;
+        self
     }
     pub fn ping(&mut self) -> Result<()> {
         self.communicate(Command::Ping, &[], true)?;
@@ -160,9 +174,20 @@ where
             command,
         };
         let packet = Packet::new(frame, data.len());
-        packet.write_to(&mut self.stream)?;
-        self.stream.write_all(data)?;
-        self.stream.flush()?;
+        if data.len() > self.zero_copy_after {
+            packet.write_to(&mut self.stream)?;
+            self.stream.write_all(data)?;
+            self.stream.flush()?;
+        } else {
+            self.data_buf.reserve(packet.size_full());
+            self.data_buf.clear();
+            packet.write_to(&mut Cursor::new(&mut self.data_buf))?;
+            self.data_buf.extend(data);
+            self.stream.write_all(&self.data_buf)?;
+            if self.always_flush {
+                self.stream.flush()?;
+            }
+        }
         if !wait_reply {
             return Ok(None);
         }
@@ -187,6 +212,8 @@ where
     host: HOST,
     stream: S,
     data_buf: Vec<u8>,
+    zero_copy_after: usize,
+    always_flush: bool,
 }
 
 impl<CTX, HOST, S> SimpleServerProcessor<CTX, HOST, S>
@@ -203,7 +230,19 @@ where
             host,
             stream,
             data_buf: Vec::new(),
+            zero_copy_after: DEFAULT_ZERO_COPY_AFTER,
+            always_flush: true,
         }
+    }
+
+    pub fn with_zero_copy_after(mut self, zero_copy_after: usize) -> Self {
+        self.zero_copy_after = zero_copy_after;
+        self
+    }
+
+    pub fn with_always_flush(mut self, always_flush: bool) -> Self {
+        self.always_flush = always_flush;
+        self
     }
 
     pub fn process_next(&mut self) -> Result<()> {
@@ -213,9 +252,20 @@ where
         let frame = packet.frame();
         if let Some((reply, data)) = self.host.process_frame(frame, &self.data_buf)? {
             let packet = Packet::new(reply, data.len());
-            packet.write_to(&mut self.stream)?;
-            self.stream.write_all(&data)?;
-            self.stream.flush()?;
+            if data.len() > self.zero_copy_after {
+                packet.write_to(&mut self.stream)?;
+                self.stream.write_all(&data)?;
+                self.stream.flush()?;
+            } else {
+                self.data_buf.reserve(packet.size_full());
+                self.data_buf.clear();
+                packet.write_to(&mut Cursor::new(&mut self.data_buf))?;
+                self.data_buf.extend(data);
+                self.stream.write_all(&self.data_buf)?;
+                if self.always_flush {
+                    self.stream.flush()?;
+                }
+            }
         }
         Ok(())
     }

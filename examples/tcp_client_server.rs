@@ -70,7 +70,8 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
             stream
                 .set_write_timeout(Some(Duration::from_secs(5)))
                 .unwrap();
-            let mut processor = rpdo::io::SimpleServerProcessor::new(host.clone(), stream);
+            let mut processor =
+                rpdo::io::SimpleServerProcessor::new(host.clone(), stream).with_always_flush(false);
             thread::spawn(move || loop {
                 if let Err(e) = processor.process_next() {
                     eprintln!("error: {:?}", e);
@@ -84,7 +85,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     stream.set_nodelay(true)?;
     stream.set_read_timeout(Some(Duration::from_secs(5)))?;
     stream.set_write_timeout(Some(Duration::from_secs(5)))?;
-    let mut client = rpdo::io::SimpleClient::new(stream, 0);
+    let mut client = rpdo::io::SimpleClient::new(stream, 0).with_always_flush(false);
     let mut counter: u32 = 0;
     loop {
         counter += 1;

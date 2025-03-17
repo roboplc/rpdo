@@ -103,6 +103,9 @@ impl Packet {
     pub fn data_len(&self) -> usize {
         self.data_len
     }
+    pub fn size_full(&self) -> usize {
+        PacketHeader::SIZE + Frame::SIZE + self.data_len
+    }
 }
 
 #[binrw]
