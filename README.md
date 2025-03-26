@@ -4,11 +4,12 @@
   <a href="https://docs.rs/rpdo"><img alt="docs.rs page" src="https://docs.rs/rpdo/badge.svg"></img></a>
 </h2>
 
-
 RoboPLC Data Objects Protocol is a lightweight fieldbus data exchange protocol,
 inspired by Modbus, OPC-UA and TwinCAT/ADS.
 
-(Work in progress)
+## Technical documentation
+
+Available at <https://info.bma.ai/en/actual/roboplc/rpdo.html>
 
 ## Locking safety
 
@@ -23,6 +24,8 @@ for locking. For real-time applications, the following features are available:
   (Linux only).
 
 Note: to switch locking policy, disable the crate default features.
+
+## Protocol specification
 
 ## About
 
