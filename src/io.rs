@@ -12,6 +12,7 @@ const MAX_UDP_PACKET_SIZE: usize = 16384;
 
 const DEFAULT_ZERO_COPY_AFTER: usize = 32768;
 
+/// A helper which wraps a UDP socket into a Read/Write stream
 pub struct UdpStream {
     socket: UdpSocket,
     peer: Option<SocketAddr>,
@@ -21,6 +22,7 @@ pub struct UdpStream {
 }
 
 impl UdpStream {
+    /// Create a new UDP stream
     pub fn create(bind: impl ToSocketAddrs) -> Result<Self> {
         let socket = UdpSocket::bind(bind)?;
         Ok(Self {
@@ -31,6 +33,7 @@ impl UdpStream {
             mtu: MAX_UDP_PACKET_SIZE,
         })
     }
+    /// Set the maximum packet size
     pub fn try_with_mtu(mut self, max_packet_size: usize) -> Result<Self> {
         if max_packet_size > MAX_UDP_PACKET_SIZE {
             return Err(Error::Io(std::io::Error::new(
@@ -41,6 +44,7 @@ impl UdpStream {
         self.mtu = max_packet_size;
         Ok(self)
     }
+    /// Set the peer address
     pub fn set_peer(&mut self, peer: impl ToSocketAddrs) -> Result<()> {
         let peer = peer
             .to_socket_addrs()?
@@ -95,6 +99,7 @@ impl Write for UdpStream {
     }
 }
 
+/// A simple client
 pub struct SimpleClient<S>
 where
     S: Read + Write,
@@ -111,6 +116,7 @@ impl<S> SimpleClient<S>
 where
     S: Read + Write,
 {
+    /// Create a new client
     pub fn new(stream: S, target_id: u32) -> Self {
         Self {
             request_id: 0,
@@ -121,18 +127,22 @@ where
             always_flush: true,
         }
     }
+    /// If the data size is larger than this value, it will be sent in a separate write
     pub fn with_zero_copy_after(mut self, zero_copy_after: usize) -> Self {
         self.zero_copy_after = zero_copy_after;
         self
     }
+    /// Always flush after writing
     pub fn with_always_flush(mut self, always_flush: bool) -> Self {
         self.always_flush = always_flush;
         self
     }
+    /// Ping the target
     pub fn ping(&mut self) -> Result<()> {
         self.communicate(Command::Ping, &[], true)?;
         Ok(())
     }
+    /// Read a register
     pub fn read_register(&mut self, register: u32, offset: u32, size: u32) -> Result<Vec<u8>> {
         let raw_data_header = RawDataHeader {
             register,
@@ -146,6 +156,7 @@ where
         };
         Ok(v)
     }
+    /// Write a register
     pub fn write_register(&mut self, register: u32, offset: u32, data: &[u8]) -> Result<()> {
         let raw_data_header = RawDataHeader {
             register,
@@ -158,6 +169,7 @@ where
         self.communicate(Command::WriteSharedContext, buf.get_ref(), true)?;
         Ok(())
     }
+    /// Communicate with the target
     pub fn communicate(
         &mut self,
         command: Command,
@@ -203,6 +215,7 @@ where
     }
 }
 
+/// A simple server processor
 pub struct SimpleServerProcessor<CTX, HOST, S>
 where
     CTX: RpdoContext,
@@ -222,6 +235,7 @@ where
     HOST: SyncHost<Context = CTX>,
     S: Read + Write,
 {
+    /// Create a new server processor
     pub fn new(host: HOST, stream: S) -> Self
     where
         HOST: SyncHost,
@@ -235,16 +249,19 @@ where
         }
     }
 
+    /// If the data size is larger than this value, it will be sent in a separate write
     pub fn with_zero_copy_after(mut self, zero_copy_after: usize) -> Self {
         self.zero_copy_after = zero_copy_after;
         self
     }
 
+    /// Always flush after writing
     pub fn with_always_flush(mut self, always_flush: bool) -> Self {
         self.always_flush = always_flush;
         self
     }
 
+    /// Process the next packet
     pub fn process_next(&mut self) -> Result<()> {
         let packet = Packet::read_from(&mut self.stream)?;
         self.data_buf.resize(packet.data_len(), 0);

@@ -4,12 +4,16 @@ use crate::error::Error;
 use crate::{Mutex, Result};
 use binrw::{BinRead, BinWrite};
 
+/// A shared data context trait
 #[allow(clippy::module_name_repetitions)]
 pub trait RpdoContext {
+    /// Get data from a register
     fn get_bytes(&self, register: u32, offset: u32, data_size: u32) -> Result<Vec<u8>>;
+    /// Set data to a register
     fn set_bytes(&self, register: u32, offset: u32, data: &[u8]) -> Result<()>;
 }
 
+/// A basic implementation of a shared data context
 #[derive(Clone)]
 pub struct Basic {
     data: Arc<Vec<Mutex<Vec<u8>>>>,
@@ -17,6 +21,8 @@ pub struct Basic {
 }
 
 impl Basic {
+    /// Create a new basic shared data context, `register_flexible` determines if the registers can
+    /// be resized if the length of the data is greater than the current length
     pub fn new(register_count: usize, register_size: usize, register_flexible: bool) -> Self {
         Self {
             data: Arc::new(
@@ -27,6 +33,7 @@ impl Basic {
             register_flexible,
         }
     }
+    /// Get and unpack a value from a register
     pub fn get<T>(&self, register: u32, offset: u32, data_size: u32) -> Result<T>
     where
         T: for<'a> BinRead<Args<'a> = ()>,
@@ -34,6 +41,7 @@ impl Basic {
         let mut c = Cursor::new(self.get_bytes(register, offset, data_size)?);
         T::read_le(&mut c).map_err(Into::into)
     }
+    /// Pack and set a value to a register
     pub fn set<T>(&self, register: u32, offset: u32, data: &T) -> Result<()>
     where
         T: for<'a> BinWrite<Args<'a> = ()>,

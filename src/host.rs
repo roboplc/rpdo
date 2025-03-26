@@ -7,19 +7,27 @@ use crate::context::RpdoContext;
 use crate::error::Error;
 use crate::Result;
 
+/// Custom command handler
 pub trait CustomCommandHandler: Send + Sync + 'static {
+    /// Handle a custom command
     fn handle(&self, frame: &Frame, data: &[u8]) -> Result<Option<Vec<u8>>>;
 }
 
+/// Synchronous host
 #[allow(clippy::module_name_repetitions)]
 pub trait SyncHost {
+    /// Context type
     type Context: RpdoContext;
 
+    /// Check if the host ID matches the frame target
     fn host_id_matches(&self, frame: &Frame) -> bool;
+    /// Create a frame
     fn create_frame(&self, target: u32, in_reply_to: u32, command: Command) -> Frame;
+    /// Process a frame
     fn process_frame(&self, frame: &Frame, data: &[u8]) -> Result<Option<(Frame, Vec<u8>)>>;
 }
 
+/// A default host implementation
 #[derive(Clone)]
 pub struct Host<CTX>
 where
@@ -34,6 +42,7 @@ impl<CTX> Host<CTX>
 where
     CTX: RpdoContext,
 {
+    /// Create a new host
     pub fn new(id: u32, context: CTX) -> Self {
         Self {
             id,
@@ -44,6 +53,7 @@ where
             custom_command_handler: None,
         }
     }
+    /// Set a custom command handler
     pub fn with_custom_command_handler(
         mut self,
         custom_command_handler: Arc<dyn CustomCommandHandler>,

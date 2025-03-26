@@ -4,32 +4,42 @@ use binrw::prelude::*;
 
 use crate::error::Error;
 
+/// The current version of the protocol
 pub const VERSION: u8 = 0x00;
 
-pub const OK: u8 = 0x00;
-
+/// Reply command code
 pub const COMMAND_REPLY: u16 = 0x0000;
+/// Error command code
 pub const COMMAND_ERROR: u16 = 0x0001;
 
+/// Ping command code
 pub const COMMAND_PING: u16 = 0x0002;
 
+/// Read shared context command code
 pub const COMMAND_READ_SHARED_CONTEXT: u16 = 0x0100;
+/// Write shared context command code
 pub const COMMAND_WRITE_SHARED_CONTEXT: u16 = 0x0101;
+/// Write shared context unconfirmed command code
 pub const COMMAND_WRITE_SHARED_CONTEXT_UNCONFIRMED: u16 = 0x0102;
 
-// Standard frames
+/// Standard commands
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
 pub enum Command {
-    Reply, // may carry data
-    Error, // carries error code (u16) and optional UTF-8 message
+    /// Reply, may carry data
+    Reply,
+    /// Error, carries error code (u16) and optional UTF-8 message
+    Error,
+    /// Ping, carries no data
+    Ping,
+    /// Read shared context, carries [`RawDataHeader`] and the data
+    ReadSharedContext,
+    /// Write shared context, carries [`RawDataHeader`] and the data
+    WriteSharedContext,
+    /// Write shared context with no reply (push), carries [`RawDataHeader`] and the data
+    WriteSharedContextUnconfirmed,
 
-    Ping, // carries no data
-
-    ReadSharedContext,             // carries RawData
-    WriteSharedContext,            // carries RawData
-    WriteSharedContextUnconfirmed, // carries RawData, same as WriteSharedContext but with no reply
-
-    Other(u16), // custom commands starting from 0x8000
+    /// Custom commands starting from 0x8000
+    Other(u16),
 }
 
 impl From<u16> for Command {
@@ -47,6 +57,7 @@ impl From<u16> for Command {
 }
 
 impl Command {
+    /// Get the command code
     pub fn code(self) -> u16 {
         match self {
             Self::Reply => COMMAND_REPLY,
@@ -60,6 +71,7 @@ impl Command {
     }
 }
 
+/// Packet structure
 #[derive(Debug, Clone)]
 pub struct Packet {
     frame: Frame,
@@ -67,9 +79,11 @@ pub struct Packet {
 }
 
 impl Packet {
+    /// Create a new packet
     pub fn new(frame: Frame, data_len: usize) -> Self {
         Self { frame, data_len }
     }
+    /// Write the packet to a writer
     pub fn write_to<W: Write>(&self, writer: &mut W) -> Result<(), Error> {
         let packet_header = PacketHeader::new(u32::try_from(self.data_len + Frame::SIZE)?);
         let mut buffer = [0u8; PacketHeader::SIZE + Frame::SIZE];
@@ -79,6 +93,7 @@ impl Packet {
         writer.write_all(&buffer)?;
         Ok(())
     }
+    /// Read a packet from a reader
     pub fn read_from<R: Read>(reader: &mut R) -> Result<Self, Error> {
         let mut header_buffer = [0u8; PacketHeader::SIZE];
         reader.read_exact(&mut header_buffer)?;
@@ -97,28 +112,36 @@ impl Packet {
             data_len: usize::try_from(header.size)? - Frame::SIZE,
         })
     }
+    /// The packet frame data
     pub fn frame(&self) -> &Frame {
         &self.frame
     }
+    /// The packet data length
     pub fn data_len(&self) -> usize {
         self.data_len
     }
+    /// The full packet size (header + frame + data)
     pub fn size_full(&self) -> usize {
         PacketHeader::SIZE + Frame::SIZE + self.data_len
     }
 }
 
+/// Packet header structure
 #[binrw]
 #[brw(little, magic = b"RD")]
 #[derive(Debug, Clone, Copy)]
 pub struct PacketHeader {
+    /// The protocol version
     pub version: u8,
+    /// The size of the packet including the frame and data
     pub size: u32,
 }
 
 impl PacketHeader {
+    /// The size of the packet header
     pub const SIZE: usize = 7;
 
+    /// Create a new packet header
     pub fn new(size: u32) -> Self {
         Self {
             version: VERSION,
@@ -126,6 +149,7 @@ impl PacketHeader {
         }
     }
 
+    /// Check the protocol version is supported
     pub fn check_version(&self) -> Result<(), Error> {
         if self.version != VERSION {
             return Err(Error::UnsupportedVersion);
@@ -134,19 +158,27 @@ impl PacketHeader {
     }
 }
 
+/// Frame structure
 #[binrw]
 #[brw(little)]
 #[derive(Debug, Clone)]
 pub struct Frame {
+    /// The source host address (id)
     pub source: u32,
+    /// The target host address (id)
     pub target: u32,
+    /// The frame id
     pub id: u32,
+    /// The id of the frame this is a reply to, 0 if not a reply
     pub in_reply_to: u32,
+    /// The command code
     pub command: Command, // u16
 }
 
 impl Frame {
+    /// The size of the frame header
     pub const SIZE: usize = 19;
+    /// Convert the frame to a reply frame
     pub fn to_reply(&self, id: u32, error: bool) -> Self {
         Self {
             source: self.target,
@@ -162,16 +194,21 @@ impl Frame {
     }
 }
 
+/// Raw data header structure
 #[binrw]
 #[brw(little)]
 #[derive(Debug, Clone)]
 pub struct RawDataHeader {
+    /// The register address
     pub register: u32,
+    /// The offset within the register
     pub offset: u32,
+    /// The size of the data
     pub size: u32,
 }
 
 impl RawDataHeader {
+    /// The size of the raw data header
     pub const SIZE: usize = 12;
 }
 

@@ -1,40 +1,63 @@
 use core::fmt;
 
+/// Error code for unknown host
 pub const ERR_UNKNOWN_HOST: u16 = 0x0001;
+/// Error code for invalid command
 pub const ERR_INVALID_COMMAND: u16 = 0x0002;
+/// Error code for invalid register
 pub const ERR_INVALID_REGISTER: u16 = 0x0003;
+/// Error code for invalid offset
 pub const ERR_INVALID_OFFSET: u16 = 0x0004;
+/// Error code for invalid reply
 pub const ERR_INVALID_REPLY: u16 = 0x0005;
+/// Error code for overflow
 pub const ERR_OVERFLOW: u16 = 0x00FC;
+/// Error code for invalid version
 pub const ERR_INVALID_VERSION: u16 = 0x00F0;
+/// Error code for I/O error
 pub const ERR_IO: u16 = 0x00F1;
+/// Error code for invalid data
 pub const ERR_INVALID_DATA: u16 = 0x00F2;
+/// Error code for failed data packing/unpacking
 pub const ERR_PACKER: u16 = 0x00F3;
+/// Error code for all other errors
 pub const ERR_FAILED: u16 = 0xFFFF;
 
+/// Error type
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
+    /// Host unknown
     #[error("Host unknown")]
     UnknownHost,
+    /// Invalid command
     #[error("Invalid command")]
     InvalidCommand,
+    /// Invalid register
     #[error("Invalid register")]
     InvalidRegister,
+    /// Invalid register offset
     #[error("Invalid offset")]
     InvalidOffset,
+    /// Invalid reply received
     #[error("Invalid reply")]
     InvalidReply,
 
+    /// Overflow (e.g. register size)
     #[error("Overflow")]
     Overflow,
+    /// Unsupported protocol version
     #[error("Invalid version")]
     UnsupportedVersion,
+    /// I/O error
     #[error("I/O: {0}")]
     Io(#[from] std::io::Error),
+    /// Invalid data
     #[error("Invalid data")]
     InvalidData,
+    /// Packer/Unpacker error
     #[error("Packer: {0}")]
     Packer(#[from] binrw::Error),
+    /// Failed
     #[error("Failed: {0}")]
     Failed(String),
 }
@@ -100,6 +123,7 @@ impl From<u16> for Error {
 }
 
 impl Error {
+    /// Get the error code
     pub const fn code(&self) -> u16 {
         match self {
             Self::UnknownHost => ERR_UNKNOWN_HOST,
@@ -115,6 +139,7 @@ impl Error {
             Self::Failed(_) => ERR_FAILED,
         }
     }
+    /// Create a failed error
     pub fn failed<D: fmt::Display>(msg: D) -> Self {
         Self::Failed(msg.to_string())
     }
