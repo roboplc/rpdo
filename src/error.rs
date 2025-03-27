@@ -11,17 +11,17 @@ pub const ERR_INVALID_OFFSET: u16 = 0x0004;
 /// Error code for invalid reply
 pub const ERR_INVALID_REPLY: u16 = 0x0005;
 /// Error code for overflow
-pub const ERR_OVERFLOW: u16 = 0x00FC;
+pub const ERR_OVERFLOW: u16 = 0x0006;
 /// Error code for invalid version
-pub const ERR_INVALID_VERSION: u16 = 0x00F0;
+pub const ERR_INVALID_VERSION: u16 = 0x0007;
 /// Error code for I/O error
-pub const ERR_IO: u16 = 0x00F1;
+pub const ERR_IO: u16 = 0x0008;
 /// Error code for invalid data
-pub const ERR_INVALID_DATA: u16 = 0x00F2;
+pub const ERR_INVALID_DATA: u16 = 0x0009;
 /// Error code for failed data packing/unpacking
-pub const ERR_PACKER: u16 = 0x00F3;
+pub const ERR_PACKER: u16 = 0x0010;
 /// Error code for all other errors
-pub const ERR_FAILED: u16 = 0xFFFF;
+pub const ERR_FAILED: u16 = 0x0000;
 
 /// Error type
 #[derive(thiserror::Error, Debug)]

@@ -16,11 +16,11 @@ pub const COMMAND_ERROR: u16 = 0x0001;
 pub const COMMAND_PING: u16 = 0x0002;
 
 /// Read shared context command code
-pub const COMMAND_READ_SHARED_CONTEXT: u16 = 0x0100;
+pub const COMMAND_READ_SHARED_CONTEXT: u16 = 0x0003;
 /// Write shared context command code
-pub const COMMAND_WRITE_SHARED_CONTEXT: u16 = 0x0101;
+pub const COMMAND_WRITE_SHARED_CONTEXT: u16 = 0x0004;
 /// Write shared context unconfirmed command code
-pub const COMMAND_WRITE_SHARED_CONTEXT_UNCONFIRMED: u16 = 0x0102;
+pub const COMMAND_WRITE_SHARED_CONTEXT_UNCONFIRMED: u16 = 0x0005;
 
 /// Standard commands
 #[derive(Debug, Clone, Copy, Eq, PartialEq)]
