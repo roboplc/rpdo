@@ -7,6 +7,7 @@ use binrw::prelude::*;
 use std::io::{Cursor, Read, Write};
 use std::mem;
 use std::net::{SocketAddr, ToSocketAddrs, UdpSocket};
+use std::time::Duration;
 
 const MAX_UDP_PACKET_SIZE: usize = 16384;
 
@@ -19,6 +20,8 @@ pub struct UdpStream {
     read_buffer: Vec<u8>,
     write_buffer: Vec<u8>,
     mtu: usize,
+    read_timeout: Option<Duration>,
+    write_timeout: Option<Duration>,
 }
 
 impl UdpStream {
@@ -31,8 +34,62 @@ impl UdpStream {
             read_buffer: Vec::new(),
             write_buffer: Vec::new(),
             mtu: MAX_UDP_PACKET_SIZE,
+            read_timeout: None,
+            write_timeout: None,
         })
     }
+
+    /// Set read timeout
+    pub fn with_read_timeout(mut self, timeout: Duration) -> Result<Self> {
+        self.socket.set_read_timeout(Some(timeout))?;
+        self.read_timeout = Some(timeout);
+        Ok(self)
+    }
+
+    /// Set write timeout
+    pub fn with_write_timeout(mut self, timeout: Duration) -> Result<Self> {
+        self.socket.set_write_timeout(Some(timeout))?;
+        self.write_timeout = Some(timeout);
+        Ok(self)
+    }
+
+    /// Set both timeouts
+    pub fn with_timeouts(
+        mut self,
+        read_timeout: Duration,
+        write_timeout: Duration,
+    ) -> Result<Self> {
+        self.socket.set_read_timeout(Some(read_timeout))?;
+        self.socket.set_write_timeout(Some(write_timeout))?;
+        self.read_timeout = Some(read_timeout);
+        self.write_timeout = Some(write_timeout);
+        Ok(self)
+    }
+
+    /// Set read timeout after construction
+    pub fn set_read_timeout(&mut self, timeout: Option<Duration>) -> Result<()> {
+        self.socket.set_read_timeout(timeout)?;
+        self.read_timeout = timeout;
+        Ok(())
+    }
+
+    /// Set write timeout after construction
+    pub fn set_write_timeout(&mut self, timeout: Option<Duration>) -> Result<()> {
+        self.socket.set_write_timeout(timeout)?;
+        self.write_timeout = timeout;
+        Ok(())
+    }
+
+    /// Get current read timeout
+    pub fn read_timeout(&self) -> Option<Duration> {
+        self.read_timeout
+    }
+
+    /// Get current write timeout
+    pub fn write_timeout(&self) -> Option<Duration> {
+        self.write_timeout
+    }
+
     /// Set the maximum packet size
     pub fn try_with_mtu(mut self, max_packet_size: usize) -> Result<Self> {
         if max_packet_size > MAX_UDP_PACKET_SIZE {
