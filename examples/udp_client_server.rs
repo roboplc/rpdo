@@ -62,10 +62,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         // Server stream with timeouts
         let stream = rpdo::io::UdpStream::create("0.0.0.0:3003")
             .unwrap()
-            .with_timeouts(
-                Duration::from_secs(10),
-                Duration::from_secs(5),
-            )
+            .with_timeouts(Duration::from_secs(10), Duration::from_secs(5))
             .unwrap();
         let mut processor = rpdo::io::SimpleServerProcessor::new(host.clone(), stream);
         thread::spawn(move || loop {
@@ -76,17 +73,19 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         });
     });
     thread::sleep(Duration::from_secs(1));
-    
+
     // Client stream with timeouts
     let mut stream = rpdo::io::UdpStream::create("0.0.0.0:3004")?
         .with_read_timeout(Duration::from_secs(5))?
         .with_write_timeout(Duration::from_secs(3))?;
     stream.set_peer("0.0.0.0:3003")?;
-    
-    println!("Client timeouts - Read: {:?}, Write: {:?}", 
-             stream.read_timeout(), 
-             stream.write_timeout());
-    
+
+    println!(
+        "Client timeouts - Read: {:?}, Write: {:?}",
+        stream.read_timeout(),
+        stream.write_timeout()
+    );
+
     let mut client = rpdo::io::SimpleClient::new(stream, 0);
     let mut counter: u32 = 0;
     loop {
